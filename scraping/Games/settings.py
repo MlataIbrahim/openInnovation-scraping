@@ -12,12 +12,10 @@ BOT_NAME = "Games"
 SPIDER_MODULES = ["Games.spiders"]
 NEWSPIDER_MODULE = "Games.spiders"
 
-
-# Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = "Games (+http://www.yourdomain.com)"
-
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = False
+
+# Enable Mongo pipeline
 ITEM_PIPELINES = {
     'Games.pipelines.MongoDBPipeline': 300,
 }
@@ -27,6 +25,11 @@ MONGO_URI = 'mongodb://mongo:27017'
 MONGO_DATABASE = 'steam_market'
 DOWNLOAD_DELAY = 3
 
+# Retry Handling 
+RETRY_TIMES =  5
+RETRY_HTTP_CODES = [429, 500, 502, 503, 504]
+
+# Traffic Handling 
 AUTOTHROTTLE_ENABLED = True
 AUTOTHROTTLE_START_DELAY = 2
 AUTOTHROTTLE_MAX_DELAY = 60

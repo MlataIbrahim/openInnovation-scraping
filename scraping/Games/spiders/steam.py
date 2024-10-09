@@ -4,6 +4,7 @@ from scrapy import Spider, Request
 from ..items import GamesItem
 import urllib.parse
 import json
+from scrapy.utils.response import response_status_message
 
 
 class SteamMarketSpider(Spider):
@@ -41,35 +42,39 @@ class SteamMarketSpider(Spider):
         yield Request(
             url=self.listing_url + "?" + urllib.parse.urlencode(params),
             headers=self.headers,
-            callback=self.parse_listings
+            callback=self.parse_listings,
+            errback=self.errback_httpbin,
         )
 
     def parse_listings(self, response):
-        # from scrapy.shell import inspect_response
-        # inspect_response(response,self)
-        data = json.loads(response.body)
+        if response.status == 429:
+            self.logger.warning("Rate limited (429), applying delay before retrying...")
+            yield Request(response.url, headers=self.headers, callback=self.parse_listings, dont_filter=True, errback=self.errback_httpbin)
+            return
+
+        try:
+            data = json.loads(response.body)
+        except json.JSONDecodeError:
+            self.logger.error("Failed to decode JSON")
+            return
+
         for game in data["results"]:
             item = GamesItem()
             name = game["name"]
             appid = game["asset_description"]["appid"]
             url = f"{self.base}/listings/{appid}/{name}"
-            item["name"] =  name
-            item["sell_price"] =  game["sale_price_text"]
-            item["sell_total_offers"] =  game["sell_listings"]
-            item["historical_price"] =  game["sell_price_text"]
-            item["product_metadata"] =  {
-                    "icon": game["app_icon"],
-                    "type": game["asset_description"]["type"],
-                    "product_url": url,
-                    "market": game["asset_description"].get("market_buy_country_restriction", "N/A"),
-                }
+            item["name"] = name
+            item["sell_price"] = game["sale_price_text"]
+            item["sell_total_offers"] = game["sell_listings"]
+            item["historical_price"] = game["sell_price_text"]
+            item["product_metadata"] = {
+                "icon": game["app_icon"],
+                "type": game["asset_description"]["type"],
+                "product_url": url,
+                "market": game["asset_description"].get("market_buy_country_restriction", "N/A"),
+            }
             yield item
-            # yield Request(
-            #     url=url,
-            #     headers=self.headers,
-            #     meta={"item":item},
-            #     callback=self.parse_details
-            # )
+
         # Pagination
         start = data["start"] + data["pagesize"]
         total_count = data["total_count"]
@@ -88,10 +93,26 @@ class SteamMarketSpider(Spider):
             yield Request(
                 next_page_url,
                 headers=self.headers,
-                callback=self.parse_listings
+                callback=self.parse_listings,
+                errback=self.errback_httpbin,
             )
 
-    def parse_details(self,response):
-        yield response.meta['item']
-        # from scrapy.shell import inspect_response
-        # inspect_response(response,self)
+    def errback_httpbin(self, failure):
+        """Handle failed requests (network issues, HTTP errors, etc.)."""
+        self.logger.error(repr(failure))
+
+        if failure.check(scrapy.spidermiddlewares.httperror.HttpError):
+            response = failure.value.response
+            self.logger.error(f'HTTPError on {response.url}')
+            # Retry if possible
+            if response.status in [429, 500, 502, 503, 504]:
+                self.logger.info(f'Retrying {response.url}')
+                yield scrapy.Request(response.url, headers=self.headers, callback=self.parse_listings, dont_filter=True)
+
+        elif failure.check(scrapy.core.downloader.handlers.http11.TunnelError):
+            self.logger.error('TunnelError occurred, possible connection issue')
+
+        else:
+            self.logger.error('Other error occurred: %s', failure)
+
+
