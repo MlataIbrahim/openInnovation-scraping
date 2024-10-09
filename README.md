@@ -56,16 +56,6 @@ Ensure you have the following installed:
     http://localhost:8000/products/?offset=0&limit=10
     ```
 
-## Running Tests
-
-The project uses `unittest` for testing.
-
-To run the tests inside the Docker container:
-
-```bash
-docker-compose exec fastapi_server python -m unittest discover -s tests
-```
-
 ## Project Structure
 
 ```
@@ -109,6 +99,16 @@ Tests are available for:
 - **API Endpoints**: Tests for product retrieval.
 - **Scraper Spider**: Ensures correct data extraction from the Steam marketplace.
 
+## Running Tests
+
+The project uses `unittest` for testing.
+
+To run the tests inside the Docker container:
+
+```bash
+docker-compose exec fastapi_server python -m unittest discover -s tests
+
+```
 ## Troubleshooting
 
 If you encounter issues with MongoDB or the FastAPI application, ensure the containers are running correctly:
