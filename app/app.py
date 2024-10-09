@@ -12,6 +12,9 @@ def serialize_product(product):
 
 @app.get("/products/")
 def get_products(offset: int = 0, limit: int = 10):
+    """
+    Get paginated products from MongoDB.
+    """
     try:
         products_cursor = db.steam_market_items.find().skip(offset).limit(limit)
         products = [serialize_product(product) for product in products_cursor]
@@ -26,4 +29,5 @@ def get_products(offset: int = 0, limit: int = 10):
             "products": products
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

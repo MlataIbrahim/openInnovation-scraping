@@ -1,8 +1,7 @@
-import unittest
 from fastapi.testclient import TestClient
 from unittest.mock import patch
-from app import app
-
+from app.app import app  # Ensure the correct path is imported
+import unittest
 client = TestClient(app)
 
 class TestAPI(unittest.TestCase):
@@ -16,7 +15,6 @@ class TestAPI(unittest.TestCase):
         response = client.get("/products/")
 
         self.assertEqual(response.status_code, 404)
-
         self.assertEqual(response.json(), {"detail": "No products found"})
 
     @patch('pymongo.MongoClient')
@@ -31,7 +29,6 @@ class TestAPI(unittest.TestCase):
         response = client.get("/products/")
 
         self.assertEqual(response.status_code, 200)
-
         expected_response = {
             "offset": 0,
             "limit": 10,
