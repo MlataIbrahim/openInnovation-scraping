@@ -64,14 +64,14 @@ class SteamMarketSpider(Spider):
             appid = game["asset_description"]["appid"]
             url = f"{self.base}/listings/{appid}/{name}"
             item["name"] = name
-            item["sell_price"] = game["sale_price_text"]
-            item["sell_total_offers"] = game["sell_listings"]
-            item["historical_price"] = game["sell_price_text"]
+            item["sell_price"] = game.get("sale_price_text", "")
+            item["sell_total_offers"] = game.get("sell_listings", 0)
+            item["historical_price"] = game.get("sale_price_text", "")
             item["product_metadata"] = {
-                "icon": game["app_icon"],
+                "icon": game.get("app_icon", ""),
                 "type": game["asset_description"]["type"],
                 "product_url": url,
-                "market": game["asset_description"].get("market_buy_country_restriction", "N/A"),
+                "market": game["asset_description"].get("market_buy_country_restriction", ""),
             }
             yield item
 
